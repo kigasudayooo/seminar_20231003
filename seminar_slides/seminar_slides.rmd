@@ -1,28 +1,4 @@
----
-title: "Ｒによる可視化入門"
-author: "経済財政分析担当　細田 和希"
-lang: "ja"
 
-toc: false
-number-sections: false
-highlight-style: pygments
-
-format:
-  revealjs:
-    transition: slide
-    code-overflow: scroll
-    theme: solarized
-    fontfamily: "Noto Serif CJK JP"
-    code-fold: true
-    html-math-method: katex
-    width: 1600
-    height: 900
-    margin: 0.15
-    geometry: 
-      - top=30mm
-      - left=30mm
-
----
 
 ## はじめに
 
@@ -54,13 +30,6 @@ format:
 ## パッケージのインストール
 
 ```{r}
-#| label: install-pkgs
-#| code-summary: "パッケージをインストール"
-#| message: false
-#| echo: true
-#| warning: false
-
-
 #今回使うパッケージ一覧
 libs <- c("tidyverse","gapminder","ggthemes","gghighlight")　
 
@@ -88,12 +57,6 @@ rm(libs,requireLibs) #上のパッケージリストと関数はもう使わな�
 ## パッケージの読込み・データの確認
 
 ```{r}
-#| label: load-pkgs
-#| code-summary: "パッケージの読込み"
-#| message: false
-#| echo: true
-#| warning: false
-
 library(tidyverse)  # データを加工する用
 library(gapminder) #今回使うデータがあるパッケージ
 data("gapminder") #データの呼び出し
@@ -124,13 +87,7 @@ head(gapminder) #データの確認
 
 
 ```{r}
-#| label: calc
-#| code-summary: "データの要約"
-#| message: false
-#| echo: true
-#| warning: false
 
- 
 summary(gapminder)
 
 ```
@@ -143,11 +100,6 @@ summary(gapminder)
 ##
 #### 平均寿命の比較
 ```{r}
-#| label: fig-plot0
-#| echo: true
-#| warning: false
-#| fig-cap: "すべての国の1952～2007年の平均寿命"
-
 
 gapminder |> 
   group_by(country) |>  #国ごとにグループ化
@@ -163,11 +115,6 @@ gapminder |>
 ##
 #### 対応:大陸ごとに平均をとってみる
 ```{r}
-#| label: fig-mean_continent
-#| echo: true
-#| warning: false
-#| fig-cap: "すべての大陸の1952～2007年の平均寿命"
-
 
 gapminder |> 
   group_by(continent) |>#大陸ごとにグループを作る
@@ -188,10 +135,6 @@ gapminder |>
 ##
 #### ついでにちょっと見た目をよくしてみる
 ```{r}
-#| label: fig-mean_continent_rev
-#| echo: true
-#| warning: false
-#| fig-cap: "すべての大陸の1952～2007年の平均寿命"
 
 library(ggthemes)
 
@@ -231,11 +174,6 @@ gapminder |>
 ##
 #### 時系列の動き
 ```{r}
-#| label: fig-plot1
-#| echo: true
-#| warning: false
-#| fig-cap: "すべての国の平均寿命推移"
-
 
 gapminder |>
   mutate(country = as.factor(country)) |>
@@ -250,12 +188,6 @@ gapminder |>
 #### 対応１.大陸ごとに平均をとってみる
 
 ```{r}
-#| label: fig-plot2
-#| echo: true
-#| warning: false
-#| fig-cap: "大陸別に見た平均寿命推移"
-
-
 gapminder |>
   # 大陸ごとにグループ化
   group_by(continent,year) |>
@@ -275,11 +207,6 @@ gapminder |>
 #### ついでにちょっと見た目をよくしてみる
 
 ```{r}
-#| label: fig-plot3
-#| echo: true
-#| warning: false
-#| fig-cap: "大陸別に見た平均寿命推移"
-
 library(ggthemes)
 
 gapminder |>
@@ -313,11 +240,6 @@ gapminder |>
 
 
 ```{r}
-#| label: fig-plot4
-#| echo: true
-#| warning: false
-#| fig-cap: "すべての国の平均寿命推移（ハイライト）"
-
 # gghighlightを使う
 # gghighlightとは、ggplot2の拡張パッケージで、特定のデータを強調するためのもの
 library(gghighlight)
@@ -355,17 +277,6 @@ gapminder |>
 ##
 #### アジアが伸びている。でもどこが？
 ```{r}
-#| label: fig-plot-additional
-#| echo: true
-#| warning: false
-#| fig-cap: "アジア大陸の平均寿命推移"
-#| fig-subcap:
-#|   - 'Asia: Starts with "A - L"'
-#|   - 'Asia: Starts with "M - Z"'
-#| layout-ncol: 2
-#| column: page
-
-
 gapminder |>
   #アジア大陸に限定する
   filter(continent=="Asia") |>
@@ -391,13 +302,6 @@ gapminder |>
 ##
 #### 1952年と2007年の差を計算してみる
 ```{r}
-#| label: fig-plot-2_time_diff
-#| echo: true
-#| warning: false
-#| fig-cap: "アジア大陸の平均寿命の伸び(1952～2007年)"
-
-
-
 gapminder |>
   select(-pop,-gdpPercap) |>
   
@@ -428,13 +332,6 @@ gapminder |>
 ##
 #### 人口の伸びも見てみる
 ```{r}
-#| label: fig-plot-2_pop_diff
-#| echo: true
-#| warning: false
-#| fig-cap: "アジア大陸の人口の伸び(1952～2007年)"
-
-
-
 gapminder |>
   select(-lifeExp,-gdpPercap) |>
   
@@ -465,13 +362,6 @@ gapminder |>
 ##
 #### GDPの伸びも見てみる
 ```{r}
-#| label: fig-plot-2_gdp_total_diff
-#| echo: true
-#| warning: false
-#| fig-cap: "アジア大陸のGDPの伸び(1952～2007年)"
-
-
-
 gapminder |>
   mutate(gdp = gdpPercap*pop) |> #人口×一人当たりGDPでGDPを計算
   select(-lifeExp,-pop,-gdpPercap) |>
@@ -508,10 +398,7 @@ gapminder |>
 
 
 ```{r}
-#| label: fig-scatter
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と一人当たりGDP"
+
 gapminder |>
   ggplot()+
   # geom_pointを使って、散布図を描く
@@ -524,10 +411,7 @@ gapminder |>
 ## 
 #### ついでに大陸で色分けする
 ```{r}
-#| label: fig-scatter-rev
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と一人当たりGDP"
+
 gapminder |>
   mutate(continent = recode(continent,
                           "Africa"   = "アフリカ",
@@ -558,10 +442,7 @@ gapminder |>
 ## 
 #### 2007年だけをとる
 ```{r}
-#| label: fig-scatter-rev_filter2007
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と一人当たりGDP(2007年のみ)"
+
 gapminder |>
   filter(year == 2007) |>
   mutate(continent = recode(continent,
@@ -591,10 +472,7 @@ gapminder |>
 
 #### 人口を加味した散布図を作る
 ```{r}
-#| label: fig-scatter_incl_pop
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と一人当たりGDP"
+
 gapminder |>
   ggplot()+
   # geom_pointを使って、散布図を描く。人口を大きさで表現する
@@ -611,12 +489,6 @@ gapminder |>
 #### 人口を加味した散布図を作る（対数ver.）
 
 ```{r}
-#| label: fig-scatter_incl_pop_log
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と対数化一人当たりGDP"
-
-
 gapminder |>
   mutate(continent = recode(continent,
                           "Africa"   = "アフリカ",
@@ -643,11 +515,6 @@ gapminder |>
 #### 一応2007年だけのバージョン
 
 ```{r}
-#| label: fig-scatter_incl_pop_log_2007
-#| echo: true
-#| warning: false
-#| fig-cap: "平均寿命と対数化一人当たりGDP"
-
 
 gapminder |>
   filter(year == 2007) |>
@@ -674,18 +541,3 @@ gapminder |>
 
 ```
 
-##
-### Ｒ(＆ＲStudio)の応用的活用
-- Ｒは統計の計算以外にも使える！
-  * **使いにくい**公的統計のエクセルを使いやすく集約する
-    - 何かと悪目立ちしがちな某労省の某給与統計とか
-      * ~~使わずに済むならそれが一番です~~
-  * **使いにくい**公的統計の個票の前処理
-    - 業者に頼むと100万単位でとられるらしいですが、Rを使えば１～２日分の人件費×１人で済みます
-  * ウェブスクレイピング
-  * **このプレゼン資料の作成も**
-    - [github](https://github.com/kigasudayooo/seminar_20231003)にupしてます。
-    - Code→Download ZIPでダウンロードしてください。
-    - .rmdという拡張子のファイルを実行すれば手元で再現可能です。
-  
-# おわり{.center}
