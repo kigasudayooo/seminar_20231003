@@ -1,0 +1,688 @@
+---
+title: "Ｒによる可視化入門"
+author: "経済財政分析担当　細田 和希"
+lang: "ja"
+
+toc: false
+number-sections: false
+highlight-style: pygments
+
+format:
+  revealjs:
+    transition: slide
+    code-overflow: scroll
+    theme: solarized
+    fontfamily: "Noto Serif CJK JP"
+    code-fold: true
+    html-math-method: katex
+    width: 1600
+    height: 900
+    margin: 0.15
+    geometry: 
+      - top=30mm
+      - left=30mm
+
+---
+
+## はじめに
+
+- 今回の目的
+  * 昨年のセミナーではRを用いた個票データの集計について紹介
+  * 今回はより入門的な内容として、オープンデータを用いて、手元で再現可能な導入を目指す
+  * 流れは以下の通り
+    1. パッケージのインストール、データの確認
+    2. 可視化入門
+    3. Rでできること
+
+##
+
+  * R及びRStudioの導入は今回は割愛します
+    * 以下のサイトを参考にしてください
+      * [Rの導入](https://www.jaysong.net/RBook/installation.html#windows)
+      * [RStudioの導入](https://www.jaysong.net/RBook/ide.html)
+      * [RStudioの使い方](https://www.jaysong.net/RBook/r_customize.html)
+
+## ゴール
+- 今回のセミナーを通じてできるようになること
+  * 分析に必要なパッケージの準備
+  * 要約統計量（論文でデータを紹介するのに使われるもの）の表示
+  * ggplotを用いたグラフの描画
+  
+- 今回はオープンデータを用いて、ソースコードも共有します
+  * 手元で簡単に再現可能です
+
+## パッケージのインストール
+
+```{r}
+#| label: install-pkgs
+#| code-summary: "パッケージをインストール"
+#| message: false
+#| echo: true
+#| warning: false
+
+
+#今回使うパッケージ一覧
+libs <- c("tidyverse","gapminder","ggthemes","gghighlight")　
+
+#パッケージがなかったらインストールして呼び出す関数を作る
+requireLibs <- function(libs) {　
+  for(lib in libs){
+    if(!require(lib, character.only = T)){
+      install.packages(lib)
+      require(lib)
+    }
+  }
+}
+
+requireLibs(libs) #関数を実行
+rm(libs,requireLibs) #上のパッケージリストと関数はもう使わないので消す
+
+
+# 以下のように処理してもオッケー
+# install.packages(c("tidyverse","gapminder","ggthemes","gghighlight"))
+
+
+```
+- 上のやり方で処理するときは、パッケージの呼び出しまでまとめてやってくれるので今後の*library(package_name)*は不要
+
+## パッケージの読込み・データの確認
+
+```{r}
+#| label: load-pkgs
+#| code-summary: "パッケージの読込み"
+#| message: false
+#| echo: true
+#| warning: false
+
+library(tidyverse)  # データを加工する用
+library(gapminder) #今回使うデータがあるパッケージ
+data("gapminder") #データの呼び出し
+
+head(gapminder) #データの確認
+```
+##
+
+#### データの説明
+
+- 今回はgapminderというパッケージにあるデータを使用
+  * 1952年から2007年までの国別の統計データ
+  * [Gapminder](https://www.gapminder.org/data/)で公開されている
+
+  
+##
+
+- 変数はそれぞれ以下の通り
+  * country: 国名
+  * continent: 大陸
+  * year: 年
+  * lifeExp: 平均寿命
+  * pop: 人口
+  * gdpPercap: 一人当たりGDP
+
+## どんなデータなのかを掴む
+- 基本的な統計量(平均や分散など)を見る
+
+
+```{r}
+#| label: calc
+#| code-summary: "データの要約"
+#| message: false
+#| echo: true
+#| warning: false
+
+ 
+summary(gapminder)
+
+```
+
+
+##
+### データの図示(１変数)
+- ggplotという作図用の関数(tidyverseに含まれる)を使う
+
+##
+#### 平均寿命の比較
+```{r}
+#| label: fig-plot0
+#| echo: true
+#| warning: false
+#| fig-cap: "すべての国の1952～2007年の平均寿命"
+
+
+gapminder |> 
+  group_by(country) |>  #国ごとにグループ化
+  summarize(lifeExp_mean = mean(lifeExp,na.rm=TRUE)) |>  #グループごとに平均寿命を計算
+  ggplot() + #ここから作図用の関数（ |> ではなくて+でつなげていくことに注意）
+  geom_col(aes(y = country, x = lifeExp_mean))+ #棒グラフを作る
+  theme(legend.position = "none") #国が多すぎるので凡例を消す
+  
+
+```
+
+
+##
+#### 対応:大陸ごとに平均をとってみる
+```{r}
+#| label: fig-mean_continent
+#| echo: true
+#| warning: false
+#| fig-cap: "すべての大陸の1952～2007年の平均寿命"
+
+
+gapminder |> 
+  group_by(continent) |>#大陸ごとにグループを作る
+  
+  #大陸ごとに寿命の平均をとるときに、それぞれの国の国民数で加重平均を作る
+  mutate(life_times_pop = lifeExp * pop) |> 
+  summarize(total_life = sum(life_times_pop,na.rm = TRUE),
+            total_pop = sum(pop,na.rm = TRUE),
+            .groups = "drop") |>
+  mutate(lifeExp_mean = total_life/total_pop) |>
+  #以下は先ほどと一緒
+  ggplot() + 
+  geom_col(aes(y = continent, x = lifeExp_mean))+
+  theme(legend.position = "none")
+
+```
+
+##
+#### ついでにちょっと見た目をよくしてみる
+```{r}
+#| label: fig-mean_continent_rev
+#| echo: true
+#| warning: false
+#| fig-cap: "すべての大陸の1952～2007年の平均寿命"
+
+library(ggthemes)
+
+gapminder |>
+  #大陸名をカタカナに
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  group_by(continent) %>%
+  mutate(life_times_pop = lifeExp * pop) |> 
+  summarize(total_life = sum(life_times_pop,na.rm = TRUE),
+            total_pop = sum(pop,na.rm = TRUE),
+            .groups = "drop") |>
+  mutate(lifeExp_mean = total_life/total_pop) |> 
+  #平均寿命が長い大陸が上にくるように、順番を変える
+  mutate(continent = fct_reorder(continent,
+                                 lifeExp_mean)) |>
+  
+  ggplot() + 
+  geom_col(aes(y = continent, x = lifeExp_mean,fill = continent))+
+  
+  #x軸とy軸の表記を変更
+  labs(y = "大陸", x = "平均寿命(歳)") +
+  #背景のテーマをシンプルに
+  theme_clean()+
+  
+  #ｘ軸を10歳刻みに
+  scale_x_continuous(breaks = seq(0,70,10))+
+  scale_fill_wsj()+
+  theme(legend.position = "none")
+
+
+```
+##
+#### 時系列の動き
+```{r}
+#| label: fig-plot1
+#| echo: true
+#| warning: false
+#| fig-cap: "すべての国の平均寿命推移"
+
+
+gapminder |>
+  mutate(country = as.factor(country)) |>
+  ggplot() + 
+  #時系列なので、x軸を年に、y軸を平均寿命にして、国ごとに色分けする
+  geom_line(aes(x = year, y = lifeExp,color = country))+
+  theme(legend.position = "none")
+
+```
+
+##
+#### 対応１.大陸ごとに平均をとってみる
+
+```{r}
+#| label: fig-plot2
+#| echo: true
+#| warning: false
+#| fig-cap: "大陸別に見た平均寿命推移"
+
+
+gapminder |>
+  # 大陸ごとにグループ化
+  group_by(continent,year) |>
+  #大陸ごとに寿命の平均をとるときに、それぞれの国の国民数で加重平均を作る
+  mutate(life_times_pop = lifeExp * pop) |> 
+  summarize(total_life = sum(life_times_pop,na.rm = TRUE),
+            total_pop = sum(pop,na.rm = TRUE),
+            .groups = "drop") |>
+  mutate(lifeExp_mean = total_life/total_pop) |> 
+  
+  ggplot() + 
+  geom_line(aes(x = year, y = lifeExp_mean,color = continent))+
+  theme(legend.position = "right")
+```
+
+## 
+#### ついでにちょっと見た目をよくしてみる
+
+```{r}
+#| label: fig-plot3
+#| echo: true
+#| warning: false
+#| fig-cap: "大陸別に見た平均寿命推移"
+
+library(ggthemes)
+
+gapminder |>
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  group_by(continent,year) |>
+  mutate(life_times_pop = lifeExp * pop) |> 
+  summarize(total_life = sum(life_times_pop,na.rm = TRUE),
+            total_pop = sum(pop,na.rm = TRUE),
+            .groups = "drop") |>
+  mutate(lifeExp_mean = total_life/total_pop) |> 
+  ggplot() + 
+  
+  geom_line(aes(x = year, y = lifeExp_mean,color = continent),size = 1)+
+  # ラベルを日本語に
+  labs(x = "年", y = "平均寿命(歳)",
+       color = "大陸") +
+  theme_clean()+
+  scale_x_continuous(breaks = seq(1952,2008,5))+
+  # カラーパレットを変更
+  scale_color_wsj()
+```
+
+## 
+#### 対応２.興味のある国を強調してみる
+
+
+
+```{r}
+#| label: fig-plot4
+#| echo: true
+#| warning: false
+#| fig-cap: "すべての国の平均寿命推移（ハイライト）"
+
+# gghighlightを使う
+# gghighlightとは、ggplot2の拡張パッケージで、特定のデータを強調するためのもの
+library(gghighlight)
+
+countries_list <- gapminder |>
+  
+  # 今回は、1952年時点で最も平均寿命が短い国と長い国、そして日本を強調する
+  filter(year==1952) %>%
+  
+  # lifeExpについて、最小値と最大値をとる国と、日本だけを選ぶ
+  filter(
+    (lifeExp %in% quantile(.$lifeExp,c(0,1.0))) | 
+      country == "Japan"
+  ) 
+
+
+gapminder |>
+  ggplot() + 
+  # すべての国の平均寿命推移
+  geom_line(aes(x = year, y = lifeExp,color = country),size = 1.5)+
+  # gghighlightを使って、強調したい国を指定する
+  gghighlight(country %in%countries_list$country) +
+  # ラベルを日本語に
+  labs(x = "年", y = "平均寿命(歳)",
+       color = "大陸") +
+  # 背景をシンプルに
+  theme_clean()+
+  # x軸を5年刻みに
+  scale_x_continuous(breaks = seq(1952,2008,5))+
+  # カラーパレットを変更
+  scale_color_colorblind()
+
+```
+
+##
+#### アジアが伸びている。でもどこが？
+```{r}
+#| label: fig-plot-additional
+#| echo: true
+#| warning: false
+#| fig-cap: "アジア大陸の平均寿命推移"
+#| fig-subcap:
+#|   - 'Asia: Starts with "A - L"'
+#|   - 'Asia: Starts with "M - Z"'
+#| layout-ncol: 2
+#| column: page
+
+
+gapminder |>
+  #アジア大陸に限定する
+  filter(continent=="Asia") |>
+  #"A-L"で始まる国を選ぶ
+  filter(str_detect(country,"^[A-L]")) |>
+  ggplot() + 
+  #時系列なので、x軸を年に、y軸を平均寿命にして、国ごとに色分けする
+  geom_line(aes(x = year, y = lifeExp,color = country))+
+  #国名ごとにグラフを分ける。列は４列にする。
+  facet_wrap(~country,ncol = 4)+
+  theme(legend.position = "none")
+
+gapminder |>
+  filter(continent=="Asia") |>
+  filter(str_detect(country,"^[M-Z]")) |>
+  ggplot() + 
+  geom_line(aes(x = year, y = lifeExp,color = country))+
+  facet_wrap(~country,ncol = 4)+
+  ylim(c(30,80))+
+  theme(legend.position = "none")
+```
+
+##
+#### 1952年と2007年の差を計算してみる
+```{r}
+#| label: fig-plot-2_time_diff
+#| echo: true
+#| warning: false
+#| fig-cap: "アジア大陸の平均寿命の伸び(1952～2007年)"
+
+
+
+gapminder |>
+  select(-pop,-gdpPercap) |>
+  
+  #アジア大陸に限定する
+  filter(continent=="Asia" & year%in%c(1952,2007)) |>
+  mutate(year = str_c("x",year)) |>
+  
+  # ワイド形式に変換
+  pivot_wider(names_from = year,values_from = lifeExp) |> 
+  # 1952年と2007年の差を計算
+  mutate(diff_lifeExp = x2007-x1952) |>
+  # 差の大きい順に並び替え
+  mutate(country = fct_reorder(country,
+                                 diff_lifeExp)) |> 
+  
+  ggplot() + 
+  # 棒グラフを描く
+  geom_col(aes(x = diff_lifeExp,y = country),fill = "red")+
+  # gghighlightを使って、強調したい国を指定する
+  gghighlight(country %in% c("Japan","China","India"),
+              unhighlighted_params = list(linewidth = 1, fill = alpha("pink", 0.7))) +
+  theme(legend.position = "none")+
+  # 日本語のラベルをつける
+  labs(y = "国名", x = "平均寿命(歳)") +
+  theme_clean()
+
+```
+##
+#### 人口の伸びも見てみる
+```{r}
+#| label: fig-plot-2_pop_diff
+#| echo: true
+#| warning: false
+#| fig-cap: "アジア大陸の人口の伸び(1952～2007年)"
+
+
+
+gapminder |>
+  select(-lifeExp,-gdpPercap) |>
+  
+  #アジア大陸に限定する
+  filter(continent=="Asia" & year%in%c(1952,2007)) |>
+  mutate(year = str_c("x",year)) |>
+  
+  # ワイド形式に変換
+  pivot_wider(names_from = year,values_from = pop) |> 
+  # 1952年と2007年の差を計算
+  mutate(diff_pop = x2007-x1952) |>
+  # 差の大きい順に並び替え
+  mutate(country = fct_reorder(country,
+                                 diff_pop)) |> 
+  
+  ggplot() + 
+  # 棒グラフを描く
+  geom_col(aes(x = diff_pop,y = country),fill = "red")+
+  # gghighlightを使って、強調したい国を指定する
+  gghighlight(country %in% c("Japan","China","India"),
+              unhighlighted_params = list(linewidth = 1, fill = alpha("pink", 0.7))) +
+  theme(legend.position = "none")+
+  # 日本語のラベルをつける
+  labs(y = "国名", x = "人口(人)") +
+  theme_clean()
+
+```
+##
+#### GDPの伸びも見てみる
+```{r}
+#| label: fig-plot-2_gdp_total_diff
+#| echo: true
+#| warning: false
+#| fig-cap: "アジア大陸の一人当たりGDPの伸び(1952～2007年)"
+
+
+
+gapminder |>
+  mutate(gdp = gdpPercap*pop) |> #人口×一人当たりGDPでGDPを計算
+  select(-lifeExp,-pop,-gdpPercap) |>
+  
+  #アジア大陸に限定する
+  filter(continent=="Asia" & year%in%c(1952,2007)) |>
+  mutate(year = str_c("x",year)) |>
+  
+  # ワイド形式に変換
+  pivot_wider(names_from = year,values_from = gdp) |> 
+  # 1952年と2007年の差を計算
+  mutate(diff_gdp = x2007-x1952) |>
+  filter(diff_gdp>0) |>
+  # 差の大きい順に並び替え
+  mutate(country = fct_reorder(country,
+                                 diff_gdp)) |> 
+  
+  ggplot() + 
+  # 棒グラフを描く
+  geom_col(aes(x = diff_gdp,y = country),fill = "red")+
+  # gghighlightを使って、強調したい国を指定する
+  gghighlight(country %in% c("Japan","China","India"),
+              unhighlighted_params = list(linewidth = 1, fill = alpha("pink", 0.7))) +
+  theme(legend.position = "none")+
+  # 日本語のラベルをつける
+  labs(y = "国名", x = "GDP(＄)") +
+  theme_clean()
+
+```
+
+## 
+### ２変数の場合
+#### 散布図を作る
+
+
+```{r}
+#| label: fig-scatter
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と一人当たりGDP"
+gapminder |>
+  ggplot()+
+  # geom_pointを使って、散布図を描く
+  geom_point(aes(x = gdpPercap,
+                 y = lifeExp))
+
+
+```
+
+## 
+#### ついでに大陸で色分けする
+```{r}
+#| label: fig-scatter-rev
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と一人当たりGDP"
+gapminder |>
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  ggplot()+
+  
+  # geom_pointを使って、散布図を描く
+  geom_point(aes(x = log(gdpPercap),
+                 y = lifeExp,
+             color = continent))+
+  # 線形近似直線を引く
+  stat_smooth(aes(x = log(gdpPercap),
+                 y = lifeExp),
+               se = FALSE,
+              method = "lm")+
+  labs(x = "対数化一人当たりGDP", y = "平均寿命(歳)",
+       color = "大陸") +
+  theme_clean()+
+  scale_color_wsj()
+
+
+```
+
+
+## 
+#### 2007年だけをとる
+```{r}
+#| label: fig-scatter-rev_filter2007
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と一人当たりGDP(2007年のみ)"
+gapminder |>
+  filter(year == 2007) |>
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  ggplot()+
+  geom_point(aes(x = log(gdpPercap),
+                 y = lifeExp,
+             color = continent))+
+  stat_smooth(aes(x = log(gdpPercap),
+                 y = lifeExp),
+              method = "lm")+
+  labs(x = "対数化一人当たりGDP", y = "平均寿命(歳)",
+       color = "大陸") +
+  theme_clean()+
+  scale_color_wsj()
+
+
+```
+
+
+##
+### ３変数の場合
+
+#### 人口を加味した散布図を作る
+```{r}
+#| label: fig-scatter_incl_pop
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と一人当たりGDP"
+gapminder |>
+  ggplot()+
+  # geom_pointを使って、散布図を描く。人口を大きさで表現する
+  geom_point(aes(x = gdpPercap,
+                 y = lifeExp,
+                 size = pop))
+
+
+```
+
+
+##
+
+#### 人口を加味した散布図を作る（対数ver.）
+
+```{r}
+#| label: fig-scatter_incl_pop_log
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と対数化一人当たりGDP"
+
+
+gapminder |>
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  ggplot()+
+  geom_point(aes(x = log(gdpPercap),
+                 y = lifeExp,
+                 size = pop,
+             color = continent))+
+
+  labs(x = "対数化一人当たりGDP", y = "平均寿命(歳)",
+       color = "大陸") +
+  theme_clean()+
+  scale_color_wsj()
+
+
+```
+
+
+##
+#### 一応2007年だけのバージョン
+
+```{r}
+#| label: fig-scatter_incl_pop_log_2007
+#| echo: true
+#| warning: false
+#| fig-cap: "平均寿命と対数化一人当たりGDP"
+
+
+gapminder |>
+  filter(year == 2007) |>
+  mutate(continent = recode(continent,
+                          "Africa"   = "アフリカ",
+                          "Americas"  = "アメリカ",
+                          "Asia"     = "アジア",
+                          "Europe"   = "ヨーロッパ",
+                          .default   = "オセアニア")) |>
+  ggplot()+
+  geom_point(aes(x = log(gdpPercap),
+                 y = lifeExp,
+                 size = pop,
+             color = continent))+
+  stat_smooth(aes(x = log(gdpPercap),
+                 y = lifeExp),
+              method = "lm",
+              se = FALSE)+
+  labs(x = "対数化一人当たりGDP", y = "平均寿命(歳)",
+       color = "大陸") + 
+  theme_clean()+
+  scale_color_wsj()
+
+
+```
+
+##
+### Ｒ(＆ＲStudio)の応用的活用
+- Ｒは統計の計算以外にも使える！
+  * **使いにくい**公的統計のエクセルを使いやすく集約する
+    - 何かと悪目立ちしがちな某労省の某給与統計とか
+      * ~~使わずに済むならそれが一番です~~
+  * **使いにくい**公的統計の個票の前処理
+    - 業者に頼むと100万単位でとられるらしいですが、Rを使えば１～２日分の人件費×１人で済みます
+  * ウェブスクレイピング
+  * **このプレゼン資料の作成も**
+  
+# おわり{.center}
